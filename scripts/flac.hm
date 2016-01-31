@@ -1,0 +1,191 @@
+//This file is part of the HexaMonkey project, a multimedia analyser
+//Copyright (C) 2013  Sevan Drapeau-Martin, Nicolas Fleury
+
+//This program is free software; you can redistribute it and/or
+//modify it under the terms of the GNU General Public License
+//as published by the Free Software Foundation; either version 2
+//of the License, or (at your option) any later version.
+
+//This program is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+
+//You should have received a copy of the GNU General Public License
+//along with this program; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+// https://xiph.org/flac/format.html#format_overview
+
+addMagicNumber 66 4C 61 43
+
+addExtension flac
+
+import bestd
+
+import jpeg
+
+class FlacFile as File
+{
+	@endianness = "bigEndian";
+
+    var magic = @parser.peek:(String(4));
+    if (magic == "fLaC") {
+        FlacMetaData METADATA;
+		FlacFrameHeader *;
+	}
+
+	while (1) CHUNK *;
+}
+
+class FlacMetaData
+{
+    String(4)   capturePattern;
+	var isFrame = 0;
+
+	while (isFrame == 0) {
+		FlacMetaDataBlockHeader _header;
+		var flag = _header.flag;
+
+		if (flag == 1) {
+			isFrame = 1;
+		}
+
+		var type = _header.blockType;
+		var size = _header.length;
+		if (type == 0x00)
+			FlacMetaDataBlockStreamInfo *;
+		else if (type == 0x01)
+			FlacMetaDataBlockPadding(size) *;
+		else if (type == 0x02)
+			FlacMetaDataBlockApplication(size) *;
+		else if (type == 0x03)
+			FlacMetaDataBlockSeekTable(size) *;
+		else if (type == 0x04)
+			FlacMetaDataBlockVorbisComment(size) *;
+		else if (type == 0x05)
+			FlacMetaDataBlockCueSheet(size) *;
+		else if (type == 0x06)
+			FlacMetaDataBlockPicture(size) *;
+		else
+			FlacMetaDataBlockPadding(size) *;
+
+	}
+}
+
+class FlacMetaDataBlockHeader
+{
+	uint(1) flag;
+	enum uint(7) {
+		0x00 : "StreamInfo",
+		0x01 : "Padding",
+		0x02 : "Application",
+		0x03 : "SeekTable",
+		0x04 : "Vorbis_Comment",
+		0x05 : "CueSheet",
+		0x06 : "Picture",
+		0x7f : "Invalid"
+	} blockType;
+	uint(24) length;
+}
+
+class FlacMetaDataBlockStreamInfo
+{
+	uint(16) minBlockSize;
+	uint(16) maxBlockSize;
+	uint(24) minFrameSize;
+	uint(24) maxFrameSize;
+	uint(20) sampleRate;
+	uint(3) channelNb;
+	uint(5) bitPerSample;
+	uint(36) totalSampleNb;
+	Data(128) md5;
+}
+
+class FlacMetaDataBlockPadding(size)
+{
+	String(@args.size) padding;
+}
+
+class FlacMetaDataBlockApplication(size) extends Data(size+32)
+{
+	uint(32) id;
+	uint(@args.size) *;
+}
+
+class FlacMetaDataBlockSeekTable(size)
+{
+	Data(@rem) *;
+}
+
+class FlacMetaDataBlockVorbisComment(size)
+{
+	String(@args.size) comment;
+}
+
+class FlacMetaDataBlockCueSheet(size)
+{
+	Data(@rem) *;
+}
+
+class FlacMetaDataBlockPicture(size)
+{
+	uint(32) pictureType;
+
+	uint(32) MIMETypeLength;
+	String(MIMETypeLength) MIMETypeString;
+
+	uint(32) descLength;
+	String(descLength) descString;
+
+	uint(32) width;
+	uint(32) height;
+	uint(32) colorDepth;
+	uint(32) colorUsed;
+	uint(32) picLength;
+
+	String(picLength) picData;
+//	JpegData(picLength) picData;
+}
+
+class FlacFrame
+{
+}
+
+class FlacFrameHeader
+{
+	uint(14) syncCode;
+	uint(1) *;
+	uint(1) blockStrategy;
+	uint(4) blockSizeCode;
+	uint(4) sampleRateCode;
+	uint(4) channelCode;
+	uint(3) sampleSize;
+	uint(1) *;
+	uint(32) *;
+	if (blockSizeCode == 0b0110)
+		uint(8) blockSize;
+	else if (blockSizeCode == 0b0111)
+		uint(16) blockSize;
+	if (sampleRateCode == 0b1100)
+		uint(8) sampleRate;
+	else if (sampleRateCode == 0b1101)
+		uint(16) sampleRate;
+	else if (sampleRateCode == 0b1110)
+		uint(16) sampleRate;
+	uint(8) crc;
+}
+
+class FlacFrameFooter
+{
+}
+
+class FlacSubFrame
+{
+}
+
+class FlacSubFrameHeader
+{
+	uint(1) padding;
+	uint(6) type;
+}
